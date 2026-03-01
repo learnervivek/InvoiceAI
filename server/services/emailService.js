@@ -52,7 +52,7 @@ const getAuthenticatedClient = async (userId, refreshToken) => {
 
 // ─── Professional HTML Email Template ─────────────────────────────────────────
 
-const buildEmailBody = (invoice) => {
+const buildEmailBody = (invoice, paymentLink = null) => {
   const senderName = invoice.from?.name || 'InvoiceGen';
   const invoiceNumber = invoice.invoiceNumber || 'N/A';
   const currency = invoice.currency || 'USD';
@@ -153,6 +153,14 @@ const buildEmailBody = (invoice) => {
                   </td>
                 </tr>
               </table>
+
+              ${paymentLink && invoice.status !== 'paid' ? `
+              <!-- Pay Now Button -->
+              <div style="text-align:center;margin-bottom:32px;">
+                <a href="${paymentLink}" style="display:inline-block;background-color:#3b82f6;color:#ffffff;padding:16px 32px;font-size:16px;font-weight:700;text-decoration:none;border-radius:8px;box-shadow:0 4px 6px rgba(59,130,246,0.25);">Pay Now</a>
+                <p style="margin:12px 0 0;color:#6b7280;font-size:12px;">Secure payment via Razorpay</p>
+              </div>
+              ` : ''}
 
               ${invoice.notes ? `
               <!-- Notes -->
@@ -286,7 +294,8 @@ const categorizeError = (error) => {
  * @param {Object} options - { invoice, pdfBuffer, filename }
  * @returns {{ success, messageId?, error?, errorType? }}
  */
-const sendInvoiceEmail = async (userId, refreshToken, { invoice, pdfBuffer, filename }) => {
+const sendInvoiceEmail = async (userId, refreshToken, options) => {
+  const { invoice, pdfBuffer, filename } = options;
   try {
     // ── 1. Validate inputs ───────────────────────────────────────────────
     if (!refreshToken) {
@@ -314,11 +323,16 @@ const sendInvoiceEmail = async (userId, refreshToken, { invoice, pdfBuffer, file
     const senderEmail = invoice.from?.email || '';
     const invoiceNumber = invoice.invoiceNumber || '';
 
-    const subject = invoiceNumber
-      ? `Invoice #${invoiceNumber} from ${senderName}`
-      : `Invoice from ${senderName}`;
+    let subject = options.subject;
+    if (!subject) {
+      subject = invoiceNumber
+        ? `Invoice #${invoiceNumber} from ${senderName}`
+        : `Invoice from ${senderName}`;
+    }
 
-    const htmlBody = buildEmailBody(invoice);
+    const htmlBody = options.isOverdue 
+      ? buildOverdueEmailBody(invoice, options.paymentLink)
+      : buildEmailBody(invoice, options.paymentLink);
 
     const fromHeader = senderEmail
       ? `${senderName} <${senderEmail}>`
@@ -361,4 +375,112 @@ const sendInvoiceEmail = async (userId, refreshToken, { invoice, pdfBuffer, file
   }
 };
 
-module.exports = { sendInvoiceEmail, buildEmailBody };
+const buildOverdueEmailBody = (invoice, paymentLink = null) => {
+  const senderName = invoice.from?.name || 'InvoiceGen';
+  const invoiceNumber = invoice.invoiceNumber || 'N/A';
+  const currency = invoice.currency || 'USD';
+
+  const formatCurrency = (amount) => {
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency,
+      }).format(amount || 0);
+    } catch {
+      return `$${(amount || 0).toFixed(2)}`;
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const total = (invoice.items || []).reduce(
+    (sum, item) => sum + (item.quantity || 0) * (item.unit_cost || 0),
+    0
+  ) * (1 + (invoice.taxRate || 0) / 100 - (invoice.discountRate || 0) / 100) + (invoice.shipping || 0);
+
+  const dueDate = invoice.dueDate ? formatDate(invoice.dueDate) : 'N/A';
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#fef2f2;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#fef2f2;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(220,38,38,0.08);">
+
+          <!-- Red Alert Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#dc2626 0%,#ef4444 100%);padding:32px 40px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">Past Due Notice</h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;font-weight:500;">Invoice #${invoiceNumber} is now overdue</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:1.6;">
+                Hello${invoice.to?.name ? ' ' + invoice.to.name : ''},
+              </p>
+              <p style="margin:0 0 24px;color:#374151;font-size:16px;line-height:1.6;">
+                This is a friendly reminder that your payment for <strong>Invoice #${invoiceNumber}</strong> was due on <strong>${dueDate}</strong> and is currently outstanding.
+              </p>
+
+              <!-- Warning Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#fff1f2;border:1px solid #fecaca;border-radius:8px;margin-bottom:32px;">
+                <tr>
+                  <td style="padding:24px;text-align:center;">
+                    <span style="color:#991b1b;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Total Amount Outstanding</span><br>
+                    <span style="color:#b91c1c;font-size:32px;font-weight:800;letter-spacing:-1px;">${formatCurrency(total)}</span>
+                  </td>
+                </tr>
+              </table>
+
+              ${paymentLink ? `
+              <!-- Pay Now Button -->
+              <div style="text-align:center;margin-bottom:32px;">
+                <p style="margin:0 0 16px;color:#374151;font-size:15px;font-weight:500;">Please settle this invoice at your earliest convenience:</p>
+                <a href="${paymentLink}" style="display:inline-block;background-color:#dc2626;color:#ffffff;padding:18px 40px;font-size:16px;font-weight:700;text-decoration:none;border-radius:8px;box-shadow:0 4px 14px rgba(220,38,38,0.3)">Pay Now Online</a>
+              </div>
+              ` : ''}
+
+              <p style="margin:0 0 16px;color:#4b5563;font-size:14px;line-height:1.6;">
+                If you have already sent the payment, please disregard this message. If not, we would appreciate it if you could take a moment to process it today.
+              </p>
+              
+              <p style="margin:0;color:#6b7280;font-size:14px;line-height:1.6;">
+                Thank you,<br><strong>${senderName}</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 40px;background-color:#f9fafb;text-align:center;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;font-weight:500;">
+                Questions? Contact ${invoice.from?.email || senderName}
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+};
+
+module.exports = { sendInvoiceEmail, buildEmailBody, buildOverdueEmailBody };

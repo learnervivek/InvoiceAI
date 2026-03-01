@@ -17,7 +17,7 @@ const invoiceSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'generated', 'sent', 'paid'],
+      enum: ['draft', 'sent', 'viewed', 'paid', 'overdue'],
       default: 'draft',
     },
     invoiceNumber: {
@@ -50,8 +50,24 @@ const invoiceSchema = new mongoose.Schema(
     terms: { type: String, default: '' },
     dueDate: { type: Date },
     issueDate: { type: Date, default: Date.now },
+    // Status timestamps
+    sentAt: { type: Date },
+    viewedAt: { type: Date },
+    paidAt: { type: Date },
     // PDF
     pdfUrl: { type: String, default: '' },
+    // Recurring
+    recurringType: {
+      type: String,
+      enum: ['weekly', 'monthly', 'yearly', null],
+      default: null,
+    },
+    nextRunDate: { type: Date, default: null },
+    parentInvoiceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Invoice',
+      default: null,
+    },
     // Chat history for this invoice
     conversationHistory: [
       {
@@ -82,15 +98,11 @@ invoiceSchema.virtual('total').get(function () {
 });
 
 // ── Compound Indexes ──────────────────────────────────────────────────────────
-// Optimize common query patterns
-
-// "Get my drafts" — filters by user + status
 invoiceSchema.index({ userId: 1, status: 1 });
-
-// "Recent invoices" — sorts by creation date descending per user
 invoiceSchema.index({ userId: 1, createdAt: -1 });
-
-// "Find by invoice number" — lookup by number per user
 invoiceSchema.index({ userId: 1, invoiceNumber: 1 });
+invoiceSchema.index({ status: 1, dueDate: 1 });
+// Index for recurring cron: find invoices due for regeneration
+invoiceSchema.index({ recurringType: 1, nextRunDate: 1 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

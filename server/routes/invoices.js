@@ -8,8 +8,9 @@ const {
   generateInvoicePDF,
   sendInvoice,
   getApiUsage,
+  updateStatus,
 } = require('../controllers/invoiceController');
-const auth = require('../middleware/auth');
+const auth = require('../middlewares/auth');
 const { validateInvoice } = require('../validators/invoiceValidator');
 
 const router = express.Router();
@@ -25,6 +26,7 @@ router.put('/:id', validateInvoice('update'), updateInvoice);
 router.delete('/:id', deleteInvoice);
 router.post('/:id/generate-pdf', generateInvoicePDF);
 router.post('/:id/send', sendInvoice);
+router.patch('/:id/status', updateStatus);
 
 module.exports = router;
 

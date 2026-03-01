@@ -68,7 +68,11 @@ const createInvoiceSchema = z.object({
   terms: z.string().max(2000, 'Terms must be 2000 characters or less').optional().default(''),
 
   // Status
-  status: z.enum(['draft', 'generated', 'sent', 'paid']).optional().default('draft'),
+  status: z.enum(['draft', 'sent', 'viewed', 'paid', 'overdue']).optional().default('draft'),
+
+  // Recurring
+  recurringType: z.enum(['weekly', 'monthly', 'yearly']).nullable().optional().default(null),
+  nextRunDate: z.union([z.string().datetime(), z.string().date(), z.string()]).nullable().optional().default(null),
 });
 
 // ─── Update Invoice Schema (all fields optional) ─────────────────────────────

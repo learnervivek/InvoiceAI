@@ -1,157 +1,137 @@
-# 🧾 InvoiceGen — Conversational Invoice Generator
+# 🧾 InvoiceAI — Conversational Invoice Generator
 
-A production-ready MERN stack application that lets you **create invoices through a chat interface**, preview them in real-time, generate PDFs, and send them via Gmail.
+A production-ready MERN stack application that lets you **create invoices through an intelligent chat interface**, preview them in real-time, generate professional PDFs, and manage your business finances with a dedicated dashboard.
 
-![MERN](https://img.shields.io/badge/MERN-Stack-green) ![License](https://img.shields.io/badge/License-MIT-blue)
+![MERN](https://img.shields.io/badge/MERN-Stack-green) ![License](https://img.shields.io/badge/License-MIT-blue) ![Aesthetics](https://img.shields.io/badge/Design-Premium-blueviolet)
 
-## ✨ Features
+## ✨ Key Features
 
-- **💬 Conversational Chat UI** — Build invoices step-by-step through natural conversation
-- **👁️ Real-Time Preview** — See your invoice update live as you chat
-- **📄 PDF Generation** — Generate professional PDFs via Invoice-Generator.com API
-- **📧 Gmail Integration** — Send invoices directly via Gmail with PDF attachment
-- **🔐 Google OAuth** — Secure authentication with Google sign-in
-- **📝 Draft Saving** — Save and manage invoice drafts per user
-- **🌙 Dark Mode** — Toggle between light and dark themes
-- **📱 Responsive** — Works on desktop and tablet
+- **💬 Conversational AI Builder** — Move away from tedious forms. Build invoices naturally through a modern chat interface.
+- **👁️ Real-Time Live Preview** — Your invoice summary updates instantly as you provide details to the AI assistant.
+- **📄 Professional PDF Engine** — Generate clean, industry-standard PDFs ready for your clients.
+- **� Integrated Payments** — Collect payments faster with built-in Razorpay support (including a safe Mock Mode for testing).
+- **� Business Analytics** — Track your revenue, paid vs. overdue invoices, and total clients at a glance.
+- **�️ Admin Command Center** — Dedicated dashboard for administrators to monitor platform stats and manage users.
+- **🌙 Premium Dark Mode** — A fully cohesive dark and light theme experience across every screen.
+- **� Secure Auth** — JWT-based authentication with optional Google OAuth 2.0 integration.
 
 ## 🛠️ Tech Stack
 
-| Layer     | Technology                          |
-| --------- | ----------------------------------- |
-| Frontend  | React (Vite), Tailwind CSS, Shadcn UI |
-| Backend   | Node.js, Express.js                 |
-| Database  | MongoDB with Mongoose               |
-| Auth      | Google OAuth 2.0, JWT               |
-| PDF       | Invoice-Generator.com API           |
-| Email     | Gmail API via googleapis            |
+| Layer      | Technology                                                                 |
+| ---------- | -------------------------------------------------------------------------- |
+| **Frontend** | React (Vite), Tailwind CSS, Framer Motion, Lucide Icons, Shadcn UI, Sonner |
+| **Backend**  | Node.js, Express.js                                                        |
+| **Database** | MongoDB with Mongoose                                                      |
+| **Payment**  | Razorpay SDK                                                               |
+| **Auth**     | Google OAuth 2.0, Passport.js, JWT                                         |
+| **PDF**      | PDFKit / Invoice-Generator API integration                                 |
 
 ## 📁 Project Structure
 
-```
+```text
 Inovice-generator/
-├── client/                  # React + Vite frontend
+├── client/                  # Frontend (React + Vite)
 │   ├── src/
-│   │   ├── components/      # UI components
-│   │   │   ├── ui/          # Shadcn primitives
-│   │   │   ├── chat/        # Chat interface
-│   │   │   ├── invoice/     # Invoice preview & list
-│   │   │   └── layout/      # App layout
-│   │   ├── pages/           # Route pages
-│   │   ├── context/         # Auth context
-│   │   └── lib/             # Utils & API client
-│   └── ...
-├── server/                  # Express backend
-│   ├── config/              # DB & OAuth config
-│   ├── controllers/         # Route handlers
-│   ├── middleware/           # Auth & error handling
-│   ├── models/              # Mongoose schemas
-│   ├── routes/              # API routes
-│   └── services/            # PDF & email services
+│   │   ├── components/      # UI, Layout, Card primitives
+│   │   ├── pages/           # Landing, Dashboard, Chat, Auth, Admin
+│   │   ├── context/         # Auth & Theme State Management
+│   │   └── lib/             # API Axios instances & Utilities
+├── server/                  # Backend (Node + Express)
+│   ├── routes/              # API Route definitions
+│   ├── controllers/         # Core business logic
+│   ├── models/              # Mongoose Schemas
+│   ├── services/            # Payment, PDF & Third-party integrations
+│   └── middlewares/         # Auth, Admin & Error handling
 └── README.md
 ```
 
 ## 🚀 Getting Started
 
-### Prerequisites
-
+### 1. Prerequisites
 - **Node.js** ≥ 18
-- **MongoDB** (local or [Atlas](https://www.mongodb.com/atlas))
-- **Google Cloud Console** project with:
-  - OAuth 2.0 credentials
-  - Gmail API enabled
-- **Invoice-Generator.com** API key ([get one here](https://invoice-generator.com))
+- **MongoDB** (Local or Atlas)
+- **Google Cloud Console** (for OAuth)
+- **Razorpay Account** (for payments)
 
-### 1. Clone the repo
+### 2. Environment Setup
 
-```bash
-git clone <your-repo-url>
-cd Inovice-generator
-```
-
-### 2. Set up the backend
-
-```bash
-cd server
-cp .env.example .env
-# Edit .env with your actual values
-npm install
-```
-
-#### `.env` configuration
-
+**Server (`server/.env`):**
 ```env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/invoice-generator
-JWT_SECRET=<your-random-secret>
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_secret
 
-GOOGLE_CLIENT_ID=<your-google-client-id>
-GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+# Google OAuth
+GOOGLE_CLIENT_ID=your_id
+GOOGLE_CLIENT_SECRET=your_secret
 GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google/callback
 
-INVOICE_GENERATOR_API_KEY=<your-api-key>
+# Razorpay
+RAZORPAY_KEY_ID=your_key
+RAZORPAY_KEY_SECRET=your_secret
+RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
 
+# Third-Party APIs
+INVOICE_GENERATOR_API_KEY=your_key
 CLIENT_URL=http://localhost:5173
 ```
 
-### 3. Set up the frontend
+### 3. Installation & Launch
 
 ```bash
-cd ../client
-npm install
-```
-
-### 4. Google Cloud Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or use existing)
-3. Enable the **Gmail API**
-4. Go to **Credentials** → Create **OAuth 2.0 Client ID**
-5. Set Authorized redirect URI: `http://localhost:5000/api/auth/google/callback`
-6. Copy Client ID and Client Secret to your `.env`
-
-### 5. Run the app
-
-In two terminals:
-
-```bash
-# Terminal 1 — Backend
+# Terminal 1: Install & Run Backend
 cd server
+npm install
 npm run dev
 
-# Terminal 2 — Frontend
+# Terminal 2: Install & Run Frontend
 cd client
+npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** in your browser.
+## 📡 API Documentation
 
-## 📡 API Endpoints
+### 🔑 Authentication
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login with email/password |
+| GET | `/api/auth/google` | Trigger Google OAuth |
+| GET | `/api/auth/me` | Get current user (Auth Required) |
+| POST | `/api/auth/logout` | Clear session (Auth Required) |
 
-### Auth
-| Method | Endpoint                    | Description              |
-| ------ | --------------------------- | ------------------------ |
-| GET    | `/api/auth/google`          | Start Google OAuth flow  |
-| GET    | `/api/auth/google/callback` | OAuth callback           |
-| GET    | `/api/auth/me`              | Get current user         |
-| POST   | `/api/auth/logout`          | Logout                   |
+### 📝 Invoices (Auth Required)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/invoices` | List your invoices |
+| POST | `/api/invoices` | Create new invoice |
+| GET | `/api/invoices/:id` | Get invoice details |
+| PUT | `/api/invoices/:id` | Update invoice |
+| DELETE | `/api/invoices/:id` | Delete invoice |
+| POST | `/api/invoices/:id/generate-pdf` | Generate & get PDF link |
+| POST | `/api/invoices/:id/send` | Email invoice to client |
+| PATCH | `/api/invoices/:id/status` | Update payment status |
 
-### Invoices
-| Method | Endpoint                           | Description         |
-| ------ | ---------------------------------- | ------------------- |
-| GET    | `/api/invoices`                    | List user invoices  |
-| GET    | `/api/invoices/:id`                | Get single invoice  |
-| POST   | `/api/invoices`                    | Create invoice      |
-| PUT    | `/api/invoices/:id`                | Update invoice      |
-| DELETE | `/api/invoices/:id`                | Delete invoice      |
-| POST   | `/api/invoices/:id/generate-pdf`   | Generate PDF        |
-| POST   | `/api/invoices/:id/send`           | Send via Gmail      |
+### 💳 Payments
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/payments/create-order` | Initialize Razorpay order (Auth) |
+| POST | `/api/payments/verify` | Verify payment signature (Auth) |
+| POST | `/api/payments/mock-verify` | Simulator for test mode (Auth) |
+| POST | `/api/payments/webhook` | Direct Razorpay webhook hook |
 
-### Chat
-| Method | Endpoint             | Description             |
-| ------ | -------------------- | ----------------------- |
-| POST   | `/api/chat/message`  | Process chat message    |
+### 💬 Chat & AI
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/chat/message` | Process conversational input |
+
+### 📊 Analytics & Admin
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/analytics/summary` | Get user revenue stats (Auth) |
+| GET | `/api/admin/stats` | Platform-wide stats (Admin Only) |
+| GET | `/api/admin/users` | List all users (Admin Only) |
 
 ## 📄 License
-
-MIT
+MIT — Created with ❤️ for modern businesses.

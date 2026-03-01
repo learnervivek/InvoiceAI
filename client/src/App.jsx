@@ -1,11 +1,32 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import Navbar from '@/components/layout/Navbar';
+import HomePage from '@/pages/HomePage';
 import LoginPage from '@/pages/LoginPage';
 import AuthCallback from '@/pages/AuthCallback';
 import DashboardPage from '@/pages/DashboardPage';
 import ChatPage from '@/pages/ChatPage';
+import AdminDashboard from '@/pages/AdminDashboard';
 import { Loader2 } from 'lucide-react';
 import { Toaster } from 'sonner';
+
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -43,6 +64,8 @@ function PublicRoute({ children }) {
   return children;
 }
 
+import { ThemeProvider } from '@/context/ThemeContext';
+
 function AppRoutes() {
   return (
     <Routes>
@@ -71,26 +94,48 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
+        }
+      />
+      <Route path="/" element={<HomePage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  const isAuthPage = ['/login', '/auth/callback'].includes(location.pathname);
+
+  return (
+    <>
+      {!isAuthPage && <Navbar />}
+      <AppRoutes />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        toastOptions={{
+          className: 'font-sans',
+        }}
+      />
+    </>
   );
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-        <Toaster
-          position="top-right"
-          richColors
-          closeButton
-          toastOptions={{
-            className: 'font-sans',
-          }}
-        />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

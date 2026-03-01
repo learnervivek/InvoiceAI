@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,19 +9,39 @@ import {
     Download,
     Send,
     Trash2,
-    Eye,
     Loader2,
     Plus,
     Search,
+    CreditCard,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import api from '@/lib/api';
 
 const statusConfig = {
     draft: { label: 'Draft', variant: 'secondary', icon: '📝' },
-    generated: { label: 'Generated', variant: 'warning', icon: '📄' },
     sent: { label: 'Sent', variant: 'default', icon: '✉️' },
+    viewed: { label: 'Viewed', variant: 'outline', icon: '👁️' },
     paid: { label: 'Paid', variant: 'success', icon: '✅' },
+    overdue: { label: 'Overdue', variant: 'destructive', icon: '⚠️' },
+};
+
+/**
+ * Load Razorpay checkout script dynamically.
+ */
+const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+        if (document.getElementById('razorpay-script')) {
+            resolve(true);
+            return;
+        }
+        const script = document.createElement('script');
+        script.id = 'razorpay-script';
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
 };
 
 export default function InvoiceList() {
@@ -30,6 +50,7 @@ export default function InvoiceList() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [deletingId, setDeletingId] = useState(null);
+    const [payingId, setPayingId] = useState(null);
 
     useEffect(() => {
         fetchInvoices();
@@ -52,8 +73,9 @@ export default function InvoiceList() {
         try {
             await api.delete(`/invoices/${id}`);
             setInvoices((prev) => prev.filter((inv) => inv._id !== id));
+            toast.success('Invoice deleted');
         } catch (error) {
-            console.error('Failed to delete:', error);
+            toast.error('Failed to delete invoice');
         } finally {
             setDeletingId(null);
         }
@@ -71,20 +93,99 @@ export default function InvoiceList() {
             a.download = `invoice-${invoiceNumber || id}.pdf`;
             a.click();
             URL.revokeObjectURL(url);
+            toast.success('PDF downloaded');
         } catch (error) {
-            alert('PDF generation failed');
+            toast.error('PDF generation failed');
         }
     };
 
     const handleSend = async (id) => {
         try {
             await api.post(`/invoices/${id}/send`);
-            alert('Invoice sent successfully!');
+            toast.success('Invoice sent successfully!');
             fetchInvoices();
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to send invoice');
+            toast.error(error.response?.data?.message || 'Failed to send invoice');
         }
     };
+
+    const handleMockPay = async (invoiceId) => {
+        setPayingId(invoiceId);
+        try {
+            await api.post('/payment/mock-verify', { invoiceId });
+            toast.success('Mock payment successful! Invoice marked as paid.');
+            fetchInvoices();
+        } catch (error) {
+            toast.error('Mock payment failed');
+        } finally {
+            setPayingId(null);
+        }
+    };
+
+    const handlePayNow = useCallback(async (invoice) => {
+        setPayingId(invoice._id);
+
+        try {
+            // Load Razorpay script
+            const loaded = await loadRazorpayScript();
+            if (!loaded) {
+                toast.error('Failed to load Razorpay. Check your connection.');
+                return;
+            }
+
+            // Create order on backend
+            const { data: order } = await api.post('/payment/create-order', {
+                invoiceId: invoice._id,
+            });
+
+            // Open Razorpay checkout
+            const options = {
+                key: order.keyId,
+                amount: order.amount,
+                currency: order.currency,
+                name: invoice.from?.name || 'Invoice Payment',
+                description: `Payment for Invoice #${order.invoiceNumber || ''}`,
+                order_id: order.orderId,
+                handler: async (response) => {
+                    try {
+                        // Verify payment on backend
+                        await api.post('/payment/verify', {
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            invoiceId: invoice._id,
+                        });
+                        toast.success('Payment successful! Invoice marked as paid.');
+                        fetchInvoices();
+                    } catch (err) {
+                        toast.error('Payment verification failed');
+                    }
+                },
+                prefill: {
+                    name: invoice.to?.name || '',
+                    email: invoice.to?.email || '',
+                },
+                theme: {
+                    color: 'hsl(222.2 47.4% 11.2%)',
+                },
+                modal: {
+                    ondismiss: () => {
+                        setPayingId(null);
+                    },
+                },
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', (response) => {
+                toast.error(`Payment failed: ${response.error.description}`);
+            });
+            rzp.open();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to create payment order');
+        } finally {
+            setPayingId(null);
+        }
+    }, []);
 
     const filtered = invoices.filter((inv) => {
         const term = search.toLowerCase();
@@ -149,6 +250,7 @@ export default function InvoiceList() {
                         const tax = subtotal * ((invoice.taxRate || 0) / 100);
                         const discount = subtotal * ((invoice.discountRate || 0) / 100);
                         const total = subtotal + tax - discount;
+                        const canPay = ['sent', 'viewed', 'overdue'].includes(invoice.status);
 
                         return (
                             <Card
@@ -186,6 +288,38 @@ export default function InvoiceList() {
 
                                     {/* Actions */}
                                     <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {canPay && (
+                                            <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() => handlePayNow(invoice)}
+                                                disabled={payingId === invoice._id}
+                                                className="gap-1.5"
+                                            >
+                                                {payingId === invoice._id ? (
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                ) : (
+                                                    <CreditCard className="h-3.5 w-3.5" />
+                                                )}
+                                                Pay Now
+                                            </Button>
+                                        )}
+                                        {canPay && import.meta.env.VITE_MOCK_PAYMENTS === 'true' && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleMockPay(invoice._id)}
+                                                disabled={payingId === invoice._id}
+                                                className="gap-1.5 border-dashed"
+                                            >
+                                                {payingId === invoice._id ? (
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                ) : (
+                                                    <Plus className="h-3.5 w-3.5" />
+                                                )}
+                                                Mock Pay
+                                            </Button>
+                                        )}
                                         <Button
                                             variant="ghost"
                                             size="icon"
