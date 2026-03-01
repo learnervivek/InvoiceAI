@@ -113,11 +113,11 @@ export default function Navbar() {
                                             <LayoutDashboard className="h-4 w-4" />
                                             Dashboard
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer gap-2 py-2">
+                                        <DropdownMenuItem onClick={() => navigate('/invoices')} className="cursor-pointer gap-2 py-2">
                                             <FileText className="h-4 w-4" />
                                             My Invoices
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer gap-2 py-2 text-gray-400">
+                                        <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer gap-2 py-2">
                                             <Settings className="h-4 w-4" />
                                             Settings
                                         </DropdownMenuItem>
@@ -188,11 +188,11 @@ export default function Navbar() {
                                         <LayoutDashboard className="h-5 w-5" />
                                         Dashboard
                                     </MobileNavLink>
-                                    <MobileNavLink to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                                    <MobileNavLink to="/invoices" onClick={() => setIsMenuOpen(false)}>
                                         <FileText className="h-5 w-5" />
                                         My Invoices
                                     </MobileNavLink>
-                                    <MobileNavLink to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                                    <MobileNavLink to="/settings" onClick={() => setIsMenuOpen(false)}>
                                         <Settings className="h-5 w-5" />
                                         Settings
                                     </MobileNavLink>

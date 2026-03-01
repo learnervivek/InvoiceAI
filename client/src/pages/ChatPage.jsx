@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '@/components/layout/AppLayout';
 import ChatPanel from '@/components/chat/ChatPanel';
 import InvoicePreview from '@/components/invoice/InvoicePreview';
+import AiEditInput from '@/components/invoice/AiEditInput';
 import { X } from 'lucide-react';
 
 export default function ChatPage() {
@@ -20,10 +21,11 @@ export default function ChatPage() {
                 </div>
 
                 {/* Invoice Preview - Right (Desktop) */}
-                <div className="hidden lg:flex flex-1 bg-muted/20">
-                    <div className="w-full">
+                <div className="hidden lg:flex flex-1 bg-muted/20 flex-col">
+                    <div className="flex-1 overflow-y-auto">
                         <InvoicePreview />
                     </div>
+                    <AiEditInput />
                 </div>
 
                 {/* Invoice Preview - Mobile Overlay */}
@@ -46,7 +48,7 @@ export default function ChatPage() {
                                 animate={{ x: 0 }}
                                 exit={{ x: '100%' }}
                                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                                className="fixed inset-y-0 right-0 w-full sm:w-[85%] bg-background z-50 lg:hidden shadow-2xl"
+                                className="fixed inset-y-0 right-0 w-full sm:w-[85%] bg-background z-50 lg:hidden shadow-2xl flex flex-col"
                             >
                                 {/* Close Button */}
                                 <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -60,9 +62,10 @@ export default function ChatPage() {
                                 </div>
 
                                 {/* Preview Content */}
-                                <div className="h-[calc(100%-52px)] overflow-y-auto">
+                                <div className="flex-1 overflow-y-auto">
                                     <InvoicePreview />
                                 </div>
+                                <AiEditInput />
                             </motion.div>
                         </>
                     )}

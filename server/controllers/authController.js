@@ -120,6 +120,25 @@ const getMe = async (req, res) => {
   res.json({ user: req.user });
 };
 
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ message: 'Name is required' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({ message: 'Profile updated successfully', user });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ─── Logout ───────────────────────────────────────────────────────────────────
 
 const logout = async (req, res) => {
@@ -131,4 +150,4 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, login, googleAuth, googleCallback, getMe, logout };
+module.exports = { register, login, googleAuth, googleCallback, getMe, updateProfile, logout };
