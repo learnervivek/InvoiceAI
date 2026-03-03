@@ -10,11 +10,17 @@ export default function SettingsPage() {
     const { user, updateProfile } = useAuth();
     const [activeTab, setActiveTab] = useState('profile');
     const [name, setName] = useState(user?.name || '');
+    const [companyName, setCompanyName] = useState(user?.companyName || '');
+    const [address, setAddress] = useState(user?.address || '');
+    const [phone, setPhone] = useState(user?.phone || '');
     const [isUpdating, setIsUpdating] = useState(false);
 
     useEffect(() => {
         if (user) {
-            setName(user.name);
+            setName(user.name || '');
+            setCompanyName(user.companyName || '');
+            setAddress(user.address || '');
+            setPhone(user.phone || '');
         }
     }, [user]);
 
@@ -26,7 +32,7 @@ export default function SettingsPage() {
 
         setIsUpdating(true);
         try {
-            await updateProfile({ name });
+            await updateProfile({ name, companyName, address, phone });
             toast.success('Profile updated successfully');
         } catch (error) {
             toast.error(error.message || 'Failed to update profile');
@@ -111,6 +117,35 @@ export default function SettingsPage() {
                                                         defaultValue={user?.email}
                                                         disabled
                                                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-500 outline-none cursor-not-allowed"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Company Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={companyName}
+                                                        onChange={(e) => setCompanyName(e.target.value)}
+                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                        placeholder="Enter company name"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Phone Number</label>
+                                                    <input
+                                                        type="text"
+                                                        value={phone}
+                                                        onChange={(e) => setPhone(e.target.value)}
+                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                                        placeholder="Enter phone number"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2 sm:col-span-2">
+                                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Business Address</label>
+                                                    <textarea
+                                                        value={address}
+                                                        onChange={(e) => setAddress(e.target.value)}
+                                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent focus:ring-2 focus:ring-blue-500 outline-none transition-all min-h-[100px] resize-none"
+                                                        placeholder="Enter your business address"
                                                     />
                                                 </div>
                                             </div>

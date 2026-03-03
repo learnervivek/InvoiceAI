@@ -4,6 +4,7 @@ import { Sparkles, Loader2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import useInvoiceStore from '@/stores/useInvoiceStore';
+import useChatStore from '@/stores/useChatStore';
 
 export default function AiQuickCreate() {
     const [prompt, setPrompt] = useState('');
@@ -17,27 +18,58 @@ export default function AiQuickCreate() {
 
         setIsLoading(true);
         try {
+            console.log('Sending prompt to AI:', prompt);
             const { data } = await api.post('/ai/create-invoice', { prompt });
+            console.log('AI Raw Response Object:', data.data);
 
-            // Map AI response to store format
+            // Map AI response to store format with robust field fallbacks
             const mappedData = {
+                from: data.data.from || {},
                 to: {
                     name: data.data.clientName || '',
                     email: data.data.clientEmail || '',
+                    address: data.data.clientAddress || '',
                 },
-                items: (data.data.items || []).map(item => ({
-                    name: item.name || '',
-                    quantity: item.quantity || 1,
-                    unit_cost: item.price || 0,
-                    description: '',
-                })),
-                taxRate: data.data.tax || 0,
+                items: (data.data.items || []).map(item => {
+                    // Extract numeric values safely (handles "₹20,000", "5 units", etc.)
+                    const parseVal = (v) => {
+                        if (typeof v === 'number') return v;
+                        const cleaned = String(v || '0').replace(/[^\d.]/g, '');
+                        return parseFloat(cleaned) || 0;
+                    };
+
+                    const name = item.name || item.item || item.product || (item.description?.length < 30 ? item.description : '') || 'Untitled Item';
+                    const description = (item.name && item.description && item.name !== item.description)
+                        ? item.description
+                        : (item.name ? '' : item.description || '');
+
+                    return {
+                        name,
+                        quantity: parseVal(item.quantity) || 1,
+                        unit_cost: parseVal(item.unit_cost || item.price || item.unit_price || item.rate || item.cost),
+                        description,
+                    };
+                }),
+                taxRate: parseFloat(String(data.data.tax || '0').replace(/[^\d.]/g, '')) || 0,
                 currency: data.data.currency || 'INR',
                 dueDate: data.data.dueDate || '',
             };
 
+            console.log('Mapped Invoice Data:', mappedData);
+
+            // Update store and navigate
             replaceInvoiceData(mappedData);
-            toast.success('Invoice skeleton generated!');
+
+            // Synchronize Chat Store so assistant doesn't ask from Step 0
+            const chatStore = useChatStore.getState();
+            chatStore.setCurrentStep(15); // Jump to 'complete' step or near end
+            chatStore.setFlowStarted(true);
+            chatStore.addMessage({
+                role: 'bot',
+                message: `✨ I've generated an invoice for **${mappedData.to.name || 'your client'}** based on your prompt! You can review the details in the preview.`
+            });
+
+            toast.success('Invoice generated!');
             navigate('/chat');
         } catch (error) {
             console.error('AI Error:', error);

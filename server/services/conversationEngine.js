@@ -37,8 +37,13 @@ const CURRENCIES = {
 
 // ─── Default State Factory ────────────────────────────────────────────────────
 
-const createDefaultState = () => ({
-  from: { name: '', email: '', address: '', phone: '' },
+const createDefaultState = (user = null) => ({
+  from: {
+    name: user?.companyName || user?.name || '',
+    email: user?.email || '',
+    address: user?.address || '',
+    phone: user?.phone || '',
+  },
   to: { name: '', email: '', address: '', phone: '' },
   items: [],
   taxRate: 0,
@@ -909,13 +914,14 @@ const buildSummary = (state) => {
  *
  * @param {string} message - Raw user message
  * @param {object} currentState - Current invoice state (immutable input)
+ * @param {object} user - Current user profile data
  * @returns {{ state: object, response: string, intent: string, action?: string }}
  */
-const processMessage = (message, currentState = null) => {
+const processMessage = (message, currentState = null, user = null) => {
   // Initialize state if needed (immutable — never mutate input)
   const state = currentState
-    ? { ...createDefaultState(), ...currentState }
-    : createDefaultState();
+    ? { ...createDefaultState(user), ...currentState }
+    : createDefaultState(user);
 
   // 1. Detect intent
   const detection = detectIntent(message);

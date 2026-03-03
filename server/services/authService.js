@@ -31,7 +31,15 @@ const registerUser = async ({ name, email, password }) => {
   const token = generateToken(user._id);
 
   // Return sanitized user (no password)
-  const sanitized = { _id: user._id, name: user.name, email: user.email, role: user.role };
+  const sanitized = {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    companyName: user.companyName,
+    address: user.address,
+    phone: user.phone,
+  };
 
   return { token, user: sanitized };
 };
@@ -65,6 +73,9 @@ const loginUser = async ({ email, password }) => {
     email: user.email,
     role: user.role,
     avatar: user.avatar,
+    companyName: user.companyName,
+    address: user.address,
+    phone: user.phone,
   };
 
   return { token, user: sanitized };

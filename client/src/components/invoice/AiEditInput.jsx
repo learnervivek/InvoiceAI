@@ -20,7 +20,32 @@ export default function AiEditInput() {
                 currentInvoice: invoiceData
             });
 
-            replaceInvoiceData(data.data);
+            // Map AI response with robust field fallbacks
+            const mappedData = {
+                ...data.data,
+                items: (data.data.items || []).map(item => {
+                    const parseVal = (v) => {
+                        if (typeof v === 'number') return v;
+                        const cleaned = String(v || '0').replace(/[^\d.]/g, '');
+                        return parseFloat(cleaned) || 0;
+                    };
+
+                    const name = item.name || item.item || item.product || (item.description?.length < 30 ? item.description : '') || 'Untitled Item';
+                    const description = (item.name && item.description && item.name !== item.description)
+                        ? item.description
+                        : (item.name ? '' : item.description || '');
+
+                    return {
+                        name,
+                        quantity: parseVal(item.quantity) || 1,
+                        unit_cost: parseVal(item.unit_cost || item.price || item.unit_price || item.rate || item.cost),
+                        description,
+                    };
+                }),
+                taxRate: parseFloat(String(data.data.tax || '0').replace(/[^\d.]/g, '')) || 0,
+            };
+
+            replaceInvoiceData(mappedData);
             setInstruction('');
             toast.success('Invoice updated by AI!');
         } catch (error) {

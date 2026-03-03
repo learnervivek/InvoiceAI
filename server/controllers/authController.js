@@ -122,14 +122,14 @@ const getMe = async (req, res) => {
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { name } = req.body;
+    const { name, companyName, address, phone } = req.body;
     if (!name) {
       return res.status(400).json({ message: 'Name is required' });
     }
 
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { name },
+      { name, companyName, address, phone },
       { new: true, runValidators: true }
     ).select('-password');
 

@@ -12,6 +12,19 @@ const createInvoiceFromPrompt = async (req, res, next) => {
     }
 
     const result = await aiService.extractInvoiceData(prompt);
+    
+    // Merge user's profile info if not provided by AI
+    if (req.user) {
+      if (!result.from) result.from = {};
+      
+      result.from = {
+        name: result.senderName || req.user.companyName || req.user.name || '',
+        email: req.user.email || '',
+        address: result.senderAddress || req.user.address || '',
+        phone: req.user.phone || '',
+      };
+    }
+    
     res.json({ data: result });
   } catch (error) {
     next(error);

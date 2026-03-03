@@ -49,23 +49,36 @@ class AIService {
   /**
    * Helper to generate content with fallback and quota handling.
    */
-  async _safeGenerateContent(contents, secondaryModel = 'gemini-pro-latest') {
+  async _safeGenerateContent(contents, secondaryModel = 'gemini-1.5-flash') {
     try {
       const result = await this.model.generateContent(contents);
       return await result.response;
     } catch (error) {
       const errorMsg = error.message.toLowerCase();
+      const status = error.status || (error.response ? error.response.status : null);
       
-      // Handle Model Not Found (404)
-      if (errorMsg.includes('404') || errorMsg.includes('not found')) {
-        console.warn(`Primary model not found. Falling back to '${secondaryModel}'...`);
-        const fallbackModel = this.genAI.getGenerativeModel({ model: secondaryModel });
-        const result = await fallbackModel.generateContent(contents);
-        return await result.response;
+      // Handle Model Not Found (404), Service Unavailable (503), or Internal Server Error (500)
+      if (
+        errorMsg.includes('404') || 
+        errorMsg.includes('not found') ||
+        errorMsg.includes('503') ||
+        errorMsg.includes('unavailable') ||
+        errorMsg.includes('500') ||
+        status === 404 || status === 503 || status === 500
+      ) {
+        console.warn(`Primary model failed (${status || 'unknown error'}). Falling back to '${secondaryModel}'...`);
+        try {
+          const fallbackModel = this.genAI.getGenerativeModel({ model: secondaryModel });
+          const result = await fallbackModel.generateContent(contents);
+          return await result.response;
+        } catch (fallbackError) {
+          console.error(`Fallback model '${secondaryModel}' also failed:`, fallbackError.message);
+          throw fallbackError;
+        }
       }
       
       // Handle Quota Exceeded (429)
-      if (errorMsg.includes('429') || errorMsg.includes('quota')) {
+      if (errorMsg.includes('429') || errorMsg.includes('quota') || status === 429) {
         console.error('AI Quota Exceeded (429).');
         throw new Error('AI Limit Reached: You have exceeded the free tier quota for Gemini. Please wait a minute or check your Google AI Studio billing settings.');
       }
@@ -87,11 +100,15 @@ class AIService {
       {
         "clientName": "string",
         "clientEmail": "string",
+        "clientAddress": "string",
+        "senderName": "string",
+        "senderAddress": "string",
         "items": [
           {
-            "name": "string",
+            "name": "string (the product or service title)",
+            "description": "string (additional details if any)",
             "quantity": number,
-            "price": number
+            "unit_cost": number
           }
         ],
         "tax": number (percentage value, e.g., 18),
@@ -100,11 +117,14 @@ class AIService {
       }
 
       Important Rules:
-      1. If information is missing, use empty strings or 0.
-      2. If multiple items are mentioned, list them all.
-      3. For "price", use the unit price.
-      4. DO NOT include any text outside the JSON object.
-      5. If the input is not related to an invoice, return an error object: {"error": "Invalid input"}.
+      1. Extract sender details (senderName, senderAddress) ONLY if explicitly provided in the prompt.
+      2. For "name" of items, MUST use the specific product name (e.g. 'iPhone'). DO NOT leave it empty and put the name in 'description'.
+      3. For "description", use ONLY supplementary details (e.g. 'Silver, 256GB').
+      4. For "unit_cost", MUST be the numeric price per item.
+      5. If information is missing, use empty strings or 0.
+      6. If multiple items are mentioned, list them all separately.
+      7. DO NOT include any text outside the JSON object.
+      8. If the input is not related to an invoice, return an error object: {"error": "Invalid input"}.
     `;
 
     try {

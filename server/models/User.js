@@ -33,6 +33,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    companyName: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    address: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    phone: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     refreshToken: {
       type: String,
       default: '',
