@@ -54,8 +54,28 @@ const login = async (req, res, next) => {
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 
 const googleAuth = (req, res) => {
-  const url = getAuthUrl();
-  res.json({ url });
+  try {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      return res.status(500).json({
+        message: 'Google OAuth failed: GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing from Vercel environment variables.',
+      });
+    }
+
+    let redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    if (!redirectUri && req) {
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      if (host) {
+        redirectUri = `${proto}://${host}/api/auth/google/callback`;
+      }
+    }
+
+    const url = getAuthUrl(redirectUri);
+    res.json({ url });
+  } catch (error) {
+    console.error('googleAuth error:', error.message);
+    res.status(500).json({ message: 'Google Auth initialization failed: ' + error.message });
+  }
 };
 
 const googleCallback = async (req, res) => {

@@ -18,6 +18,11 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB middleware for Vercel serverless requests
 app.use(async (req, res, next) => {
+  // Non-database routes do not need to wait for DB connection
+  if (req.path === '/api' || req.path === '/api/health' || req.path === '/api/auth/google') {
+    return next();
+  }
+
   try {
     await connectDB();
     next();
