@@ -61,11 +61,10 @@ const googleAuth = (req, res) => {
 const googleCallback = async (req, res) => {
   const { code } = req.query;
 
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+
   if (!code) {
-    const errorUrl = process.env.NODE_ENV === 'production' 
-      ? `/login?error=no_code`
-      : `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=no_code`;
-    return res.redirect(errorUrl);
+    return res.redirect(`${clientUrl}/login?error=no_code`);
   }
 
   try {
@@ -110,16 +109,10 @@ const googleCallback = async (req, res) => {
     const token = authService.generateToken(user._id);
 
     // Redirect to frontend with token
-    const successUrl = process.env.NODE_ENV === 'production'
-      ? `/auth/callback?token=${token}`
-      : `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/callback?token=${token}`;
-    res.redirect(successUrl);
+    res.redirect(`${clientUrl}/auth/callback?token=${token}`);
   } catch (error) {
     console.error('OAuth callback error:', error.message);
-    const failUrl = process.env.NODE_ENV === 'production'
-      ? `/login?error=auth_failed`
-      : `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=auth_failed`;
-    res.redirect(failUrl);
+    res.redirect(`${clientUrl}/login?error=auth_failed`);
   }
 };
 
