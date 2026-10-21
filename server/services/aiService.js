@@ -10,7 +10,9 @@ class AIService {
       console.error('CRITICAL: GEMINI_API_KEY is missing from environment variables!');
     }
     this.genAI = new GoogleGenerativeAI(apiKey || '');
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    this.primaryModelName = 'gemini-3.8-flash';
+    this.fallbackModelName = 'gemini-flash-latest';
+    this.model = this.genAI.getGenerativeModel({ model: this.primaryModelName });
     
     // Log status on startup
     this._listAvailableModels();
@@ -18,7 +20,7 @@ class AIService {
 
   async _listAvailableModels() {
     try {
-      console.log('AI Service initialized with model: gemini-flash-latest');
+      console.log(`AI Service initialized with model: ${this.primaryModelName}`);
     } catch (e) {
       console.error('AI Init Log Error:', e.message);
     }
@@ -49,7 +51,7 @@ class AIService {
   /**
    * Helper to generate content with fallback and quota handling.
    */
-  async _safeGenerateContent(contents, secondaryModel = 'gemini-1.5-flash') {
+  async _safeGenerateContent(contents, secondaryModel = 'gemini-flash-latest') {
     try {
       const result = await this.model.generateContent(contents);
       return await result.response;
