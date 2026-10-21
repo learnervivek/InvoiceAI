@@ -12,12 +12,16 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
 ];
 
-const getAuthUrl = () => {
-  return oauth2Client.generateAuthUrl({
+const getAuthUrl = (redirectUri) => {
+  const options = {
     access_type: 'offline',
     scope: SCOPES,
     prompt: 'consent',
-  });
+  };
+  if (redirectUri) {
+    options.redirect_uri = redirectUri;
+  }
+  return oauth2Client.generateAuthUrl(options);
 };
 
 module.exports = { oauth2Client, getAuthUrl, SCOPES };

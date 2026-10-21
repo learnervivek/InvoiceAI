@@ -81,14 +81,27 @@ const googleAuth = (req, res) => {
 const googleCallback = async (req, res) => {
   const { code } = req.query;
 
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  // In production (Vercel), frontend and API are hosted on the same domain (via vercel.json rewrites).
+  // A relative redirect stays on whatever active domain the user is on, avoiding expired deployment URLs.
+  const isProduction = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+  const clientUrl = isProduction ? '' : (process.env.CLIENT_URL || 'http://localhost:5173');
 
   if (!code) {
     return res.redirect(`${clientUrl}/login?error=no_code`);
   }
 
   try {
-    const { tokens } = await oauth2Client.getToken(code);
+    let redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    if (!redirectUri && req) {
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      const host = req.headers['x-forwarded-host'] || req.get('host');
+      if (host) {
+        redirectUri = `${proto}://${host}/api/auth/google/callback`;
+      }
+    }
+
+    const tokenOptions = redirectUri ? { code, redirect_uri: redirectUri } : code;
+    const { tokens } = await oauth2Client.getToken(tokenOptions);
     oauth2Client.setCredentials(tokens);
 
     // Get user info
