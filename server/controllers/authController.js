@@ -62,7 +62,8 @@ const googleAuth = (req, res) => {
     }
 
     let redirectUri = process.env.GOOGLE_REDIRECT_URI;
-    if (!redirectUri && req) {
+    const isVercel = !!process.env.VERCEL || process.env.NODE_ENV === 'production';
+    if ((!redirectUri || (isVercel && redirectUri.includes('localhost'))) && req) {
       const proto = req.headers['x-forwarded-proto'] || 'https';
       const host = req.headers['x-forwarded-host'] || req.get('host');
       if (host) {
@@ -92,7 +93,7 @@ const googleCallback = async (req, res) => {
 
   try {
     let redirectUri = process.env.GOOGLE_REDIRECT_URI;
-    if (!redirectUri && req) {
+    if ((!redirectUri || (isProduction && redirectUri.includes('localhost'))) && req) {
       const proto = req.headers['x-forwarded-proto'] || 'https';
       const host = req.headers['x-forwarded-host'] || req.get('host');
       if (host) {
