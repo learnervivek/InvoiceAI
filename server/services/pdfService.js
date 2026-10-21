@@ -103,6 +103,11 @@ const categorizeError = (error) => {
     message = data.message || data.error || JSON.stringify(data);
   }
 
+  // Strip raw HTML if external service returns an HTML error page (e.g. 500/502/503)
+  if (typeof message === 'string' && (message.includes('<html') || message.includes('<!DOCTYPE') || message.includes('<body'))) {
+    message = `External PDF service temporarily unavailable (status ${status || 500}). Please try again in a moment.`;
+  }
+
   switch (status) {
     case 400:
       return {
@@ -176,7 +181,7 @@ const generatePDF = async (invoiceData, options = {}) => {
   // ── 2. Build API payload ───────────────────────────────────────────────
   const payload = buildPayload(invoiceData);
 
-  // ── 3. Call Invoice-Generator.com API ──────────────────────────────────
+  // ── 3. Call Invoice-Generator.com API with retry ────────────────────────
   try {
     const apiKey = process.env.INVOICE_GENERATOR_API_KEY;
     if (!apiKey) {
@@ -185,14 +190,29 @@ const generatePDF = async (invoiceData, options = {}) => {
       });
     }
 
-    const response = await axios.post(API_URL, payload, {
+    const requestConfig = {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       responseType: 'arraybuffer',
       timeout: 30000, // 30s timeout
-    });
+    };
+
+    let response;
+    try {
+      response = await axios.post(API_URL, payload, requestConfig);
+    } catch (firstErr) {
+      const errStatus = firstErr.response?.status;
+      // If external service returned a 5xx or timed out, retry once after 1 second
+      if (!errStatus || errStatus >= 500) {
+        console.warn(`[PDF Service] Attempt 1 failed (${errStatus || 'timeout'}). Retrying in 1.5s...`);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        response = await axios.post(API_URL, payload, requestConfig);
+      } else {
+        throw firstErr;
+      }
+    }
 
     const pdfBuffer = Buffer.from(response.data);
     const pdfBase64 = pdfBuffer.toString('base64');
